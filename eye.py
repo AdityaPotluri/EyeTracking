@@ -37,9 +37,12 @@ class Eye(object):
         self.Eyeframe=None
         self.region=None
         self.analyzeEye()
+
         
         #implement a Pupil class to track Pupil movement given an eyeframe,region,center,origin
-    
+
+
+    #simply marks using a cv2 canvas anything calculated in other methods
     def gazeMarks(self):
         if self.side==1:
             top1=Eye.midpoint(self.point(37),self.point(38))
@@ -61,11 +64,12 @@ class Eye(object):
             cv2.line(self.fullFrame,top2,bottom2,(0,0,255),1)
             cv2.line(self.fullFrame,left2,right2,(0,0,255),1)
             cv2.putText(self.fullFrame,self.gaze_direction(),(25,100),cv2.FONT_HERSHEY_PLAIN,0.5,(0,0,0))
+
         cv2.polylines(self.fullFrame,[self.region],True,(255,255,255))
         
         
         
-
+    #initialized all the values needed to do gaze tracking
     def analyzeEye(self):
         if self.side==1:
             self.region=np.array([self.point(p) for p in Eye.leftEye],dtype=np.int32)
@@ -79,7 +83,7 @@ class Eye(object):
 
         
     
- 
+    #returns the part of the full frame which contains the eye 
     def eyeFramePoints(self):
         minX=np.min(self.region[:,0])
         maxX=np.max(self.region[:,0])
@@ -89,11 +93,11 @@ class Eye(object):
         
 
     
-
+    #simply a helper fucntion which returns a tuple (x,y) given a landmark number
     def point(self,landmark_num):
         return (self.landmarks.part(landmark_num).x,self.landmarks.part(landmark_num).y)
     
-    
+    # returns a boolean value true if it is blinking false if not
     def is_blinking(self):
         
         distance=lambda p1,p2:((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)**0.5
@@ -133,14 +137,13 @@ class Eye(object):
         try:
             return sclera_right/sclera_left
         except ZeroDivisionError:
-            print("zero divison")
             return 1.3
         
 
     def gaze_direction(self):
-        if(self.getIrisScleraRatio()<=0.9):
+        if(self.getIrisScleraRatio()<=0.95):
             return "Right"
-        elif(0.9<self.getIrisScleraRatio()<1.8):
+        elif(0.95<self.getIrisScleraRatio()<1.75):
             return "Center"
         return "Left"
     
