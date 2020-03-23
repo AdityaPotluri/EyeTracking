@@ -1,8 +1,6 @@
 import cv2
-import numpy as np
-import dlib
 from eye import Eye
-
+import dlib
 
 
 cap=cv2.VideoCapture(0)
@@ -18,14 +16,15 @@ while True:
     for face in faces:
         landmarks=predictor(gray,face)
         
-        a=Eye(1,frame,landmarks)
-        b=Eye(1,frame,landmarks)
+        leftEye=Eye(1,frame,landmarks)
+        rightEye=Eye(2,frame,landmarks)
         
-        a.showEye()
+        leftEye.gazeMarks()
+        rightEye.gazeMarks()
         
     cv2.imshow("Frame",frame)
 
-    key=cv2.waitKey(1)
+    key=cv2.waitKey(100)
 
     if key==ord('e'):
         break

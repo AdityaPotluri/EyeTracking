@@ -36,8 +36,6 @@ class Eye(object):
 
         self.Eyeframe=None
         self.region=None
-        self.center=None
-        self.origin=None
         self.analyzeEye()
         
         #implement a Pupil class to track Pupil movement given an eyeframe,region,center,origin
@@ -49,8 +47,11 @@ class Eye(object):
             right1=self.point(39)
             left1=self.point(36)
 
-            cv2.line(self.fullFrame,right1,left1,(255,0,0),1)      
-            cv2.polylines(self.fullFrame,[self.region],True,(255,255,255),1)
+            cv2.line(self.fullFrame,right1,left1,(255,0,0),1)   
+            cv2.line(self.fullFrame,top1,bottom1,(255,0,0))   
+            
+            cv2.putText(self.fullFrame,self.gaze_direction(),(75,100),cv2.FONT_HERSHEY_PLAIN,0.5,(0,0,0))
+            
         else:
             top2=Eye.midpoint(self.point(43),self.point(44))
             bottom2=Eye.midpoint(self.point(47),self.point(46))
@@ -59,34 +60,39 @@ class Eye(object):
 
             cv2.line(self.fullFrame,top2,bottom2,(0,0,255),1)
             cv2.line(self.fullFrame,left2,right2,(0,0,255),1)
-            cv2.polylines(self.fullFrame,[self.region],True,(255,255,255))
-
+            cv2.putText(self.fullFrame,self.gaze_direction(),(25,100),cv2.FONT_HERSHEY_PLAIN,0.5,(0,0,0))
+        cv2.polylines(self.fullFrame,[self.region],True,(255,255,255))
+        
+        
+        
 
     def analyzeEye(self):
         if self.side==1:
-            self.region=np.array([self.point(p) for p in Eye.leftEye],dtype=np.int8)
+            self.region=np.array([self.point(p) for p in Eye.leftEye],dtype=np.int32)
         else:
-            self.region=np.array([self.point(p) for p in Eye.rightEye],dtype=np.int8)
+            self.region=np.array([self.point(p) for p in Eye.rightEye],dtype=np.int32)
+        
         self.Eyeframe=self.eyeFramePoints()
-        self.origin=(self.Eyeframe[0],self.Eyeframe[2])
-        self.Eyeframe=cv2.resize(self.Eyeframe,None,fx=5,fy=5)
+        
+        #self.Eyeframe=cv2.resize(self.Eyeframe,None,fx=5,fy=5)
         
 
         
     
-
-    
-    
+ 
     def eyeFramePoints(self):
         minX=np.min(self.region[:,0])
         maxX=np.max(self.region[:,0])
         minY=np.min(self.region[:,1])
         maxY=np.max(self.region[:,1])
         return self.fullFrame[minY:maxY,minX:maxX]
+        
 
     
+
     def point(self,landmark_num):
         return (self.landmarks.part(landmark_num).x,self.landmarks.part(landmark_num).y)
+    
     
     def is_blinking(self):
         
@@ -112,7 +118,9 @@ class Eye(object):
 
             return (width/height>6.7)
 
+    #returns the ratio of the white part of the eye to the colored part of each half of an eye 
     def getIrisScleraRatio(self):
+        
         gray_eye=cv2.cvtColor(self.Eyeframe,cv2.COLOR_BGR2GRAY)
         _, threshold_eye = cv2.threshold(gray_eye, 70, 255, cv2.THRESH_BINARY)
         height, width = threshold_eye.shape
@@ -122,10 +130,20 @@ class Eye(object):
 
         right_side_threshold = threshold_eye[0: height, int(width / 2): width]
         sclera_right = cv2.countNonZero(right_side_threshold)
+        try:
+            return sclera_right/sclera_left
+        except ZeroDivisionError:
+            print("zero divison")
+            return 1.3
+        
 
-        return sclera_right/sclera_left
-
-
+    def gaze_direction(self):
+        if(self.getIrisScleraRatio()<=0.9):
+            return "Right"
+        elif(0.9<self.getIrisScleraRatio()<1.8):
+            return "Center"
+        return "Left"
+    
     #this method expects a tuple not landmark numbers to be passed in which can easily be done with the point method below
     @staticmethod
     def midpoint(p1,p2):
